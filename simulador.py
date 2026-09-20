@@ -85,6 +85,7 @@ from rede import (
     Fluxo,
     Topologia,
     carregar_topologia,
+    limite_de_segmento,
     texto_enlace_fora,
 )
 
@@ -555,7 +556,13 @@ class _Execucao:
         # há recálculo no meio da execução a coordenar.
         self.topologia = topologia_do_caso(topologia, caso)
         self.caso = caso
-        self.dispositivos = montar_dispositivos(self.topologia)
+        # O limite de segmentação vale por caso (seção 8.1): C7 declara o seu,
+        # os demais usam o global. Resolver aqui, antes de montar as pilhas,
+        # é o que faz a camada 4 de cada computador nascer já com o valor
+        # certo — não há troca de limite no meio de uma execução.
+        self.dispositivos = montar_dispositivos(
+            self.topologia, limite_de_segmento(self.topologia, caso)
+        )
         self.fila = FilaEventos()
         self._caminho: list[str] = []
         self._instante = 0

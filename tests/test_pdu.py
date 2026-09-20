@@ -168,27 +168,27 @@ class TestProgressaoDeTamanhos(unittest.TestCase):
         eventos = eventos_do_caso("C7")
 
         segmentacoes = [ev.tamanho for ev in eventos if ev.acao == "SEGMENTA"]
-        self.assertEqual(segmentacoes, [72, 72, 64])  # 60/64/56 de dados + controle
+        self.assertEqual(segmentacoes, [48, 48, 32])  # 40/40/24 de dados + H4
 
         quadros = [ev.quadro for ev in eventos if ev.acao == "ENQUADRA"]
         self.assertEqual(quadros, [f"Q{i}" for i in range(1, 13)])
 
-        # Quadros de 110, 110 e 102 octetos, um tamanho por segmento (seção 11.3).
+        # Quadros de 86, 86 e 70 octetos, um tamanho por segmento (seção 4.7).
         tam_por_quadro = {
             ev.quadro: ev.tamanho for ev in eventos if ev.acao == "ENQUADRA"
         }
-        self.assertEqual([tam_por_quadro[f"Q{i}"] for i in range(1, 5)], [110, 110, 110, 110])
-        self.assertEqual([tam_por_quadro[f"Q{i}"] for i in range(5, 9)], [110, 110, 110, 110])
-        self.assertEqual([tam_por_quadro[f"Q{i}"] for i in range(9, 13)], [102, 102, 102, 102])
+        self.assertEqual([tam_por_quadro[f"Q{i}"] for i in range(1, 5)], [86, 86, 86, 86])
+        self.assertEqual([tam_por_quadro[f"Q{i}"] for i in range(5, 9)], [86, 86, 86, 86])
+        self.assertEqual([tam_por_quadro[f"Q{i}"] for i in range(9, 13)], [70, 70, 70, 70])
 
         transmitidos = [ev.tamanho for ev in eventos if ev.acao == "TRANSMITE"]
-        self.assertEqual(sum(transmitidos), 1288)  # tabela 11.3
+        self.assertEqual(sum(transmitidos), 968)  # secao 4.7 do enunciado
 
         remontagens = [ev for ev in eventos if ev.acao == "REMONTA"]
         self.assertEqual(len(remontagens), 1, "C7 emite uma única linha REMONTA (D5)")
-        self.assertEqual(remontagens[0].tamanho, 184)
+        self.assertEqual(remontagens[0].tamanho, 104)
         entregas = [ev.tamanho for ev in eventos if ev.acao == "ENTREGA"]
-        self.assertEqual(entregas, [180])  # mensagem original recuperada inteira
+        self.assertEqual(entregas, [100])  # mensagem original recuperada inteira
 
 
 class TestCamadaFisicaEmBits(unittest.TestCase):

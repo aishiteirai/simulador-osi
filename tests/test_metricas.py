@@ -77,16 +77,16 @@ class Contabilidade(unittest.TestCase):
         cls.topo = carregar_topologia()
 
     def test_dados_uteis_contam_a_mensagem_uma_vez_so(self):
-        """C7 parte 180 octetos em três segmentos que atravessam quatro enlaces
-        cada: os dados continuam sendo 180, não 540 nem 720."""
-        self.assertEqual(metricas_de(self.topo, "C7").metricas.dados_uteis, 180)
+        """C7 parte 100 octetos em três segmentos que atravessam quatro enlaces
+        cada: os dados continuam sendo 100, não 300 nem 400."""
+        self.assertEqual(metricas_de(self.topo, "C7").metricas.dados_uteis, 100)
 
     def test_dados_uteis_somam_os_fluxos_concorrentes(self):
         """C3 são duas mensagens de 42 octetos chegando ao mesmo destino."""
         self.assertEqual(metricas_de(self.topo, "C3").metricas.dados_uteis, 84)
 
     def test_total_transmitido_soma_todos_os_quadros_de_todos_os_enlaces(self):
-        for caso, esperado in (("C1", 92), ("C2", 368), ("C7", 1288)):
+        for caso, esperado in (("C1", 92), ("C2", 368), ("C7", 968)):
             with self.subTest(caso=caso):
                 self.assertEqual(
                     metricas_de(self.topo, caso).metricas.total_transmitido, esperado
@@ -131,7 +131,7 @@ class CasosSemEntrega(unittest.TestCase):
                 self.assertEqual(metricas_de(self.topo, caso).metricas.dados_uteis, 42)
 
     def test_dados_entregues_distinguem_zero_de_arredondamento(self):
-        for caso, entregues in (("C1", 42), ("C2", 42), ("C3", 84), ("C5", 0), ("C6", 0), ("C7", 180)):
+        for caso, entregues in (("C1", 42), ("C2", 42), ("C3", 84), ("C5", 0), ("C6", 0), ("C7", 100)):
             with self.subTest(caso=caso):
                 self.assertEqual(
                     metricas_de(self.topo, caso).metricas.dados_entregues, entregues

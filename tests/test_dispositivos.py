@@ -43,7 +43,7 @@ from dispositivos import (
     montar_dispositivos,
 )
 from evento import Evento
-from rede import carregar_topologia
+from rede import carregar_topologia, limite_de_segmento
 
 _FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures")
 
@@ -70,7 +70,11 @@ class Percurso:
         reiniciar_contador_sessoes()
         self.topo = topologia
         self.caso = topologia.caso(caso)
-        self.dispositivos = montar_dispositivos(topologia)
+        # O limite de segmentação vale por caso (seção 8.1), como no motor:
+        # sem isso C7 rodaria com o limite global e daria dois segmentos.
+        self.dispositivos = montar_dispositivos(
+            topologia, limite_de_segmento(topologia, self.caso)
+        )
         self.acoes: list[AcaoCamada] = []
         self.descartado_em: str | None = None
 
@@ -481,7 +485,7 @@ class DescarteSemRotaEmC5(unittest.TestCase):
 
 
 class SegmentacaoEmC7(unittest.TestCase):
-    """C7: mensagem de 180 octetos, três segmentos, doze quadros, **uma
+    """C7: mensagem de 100 octetos, três segmentos, doze quadros, **uma
     única** linha de camada 4 no destino."""
 
     @classmethod
@@ -494,7 +498,7 @@ class SegmentacaoEmC7(unittest.TestCase):
         segmentacoes = [a for a in self.visiveis if a.acao == "SEGMENTA"]
         self.assertEqual([(a.segmento.n, a.segmento.total) for a in segmentacoes],
                          [(1, 3), (2, 3), (3, 3)])
-        self.assertEqual([a.tamanho for a in segmentacoes], [72, 72, 64])
+        self.assertEqual([a.tamanho for a in segmentacoes], [48, 48, 32])
 
     def test_doze_quadros_em_sequencia_continua(self):
         quadros = [a.quadro for a in self.visiveis if a.acao == "ENQUADRA"]
@@ -504,14 +508,14 @@ class SegmentacaoEmC7(unittest.TestCase):
         no_destino = [a for a in self.visiveis if a.dispositivo == "H4"]
         camada_4 = [a for a in no_destino if a.camada == 4]
         self.assertEqual([a.acao for a in camada_4], ["REMONTA"])
-        self.assertEqual(camada_4[0].tamanho, 184)
+        self.assertEqual(camada_4[0].tamanho, 104)
 
         acoes = [a.acao for a in no_destino]
         self.assertLess(acoes.index("REMONTA"), acoes.index("ENCERRA"))
 
-    def test_a_mensagem_volta_inteira_com_180_octetos(self):
+    def test_a_mensagem_volta_inteira_com_100_octetos(self):
         entrega = next(a for a in self.visiveis if a.acao == "ENTREGA")
-        self.assertEqual(entrega.tamanho, 180)
+        self.assertEqual(entrega.tamanho, 100)
 
 
 # --------------------------------------------------------------------------

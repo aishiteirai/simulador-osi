@@ -406,6 +406,10 @@ class Caso:
     eventos_externos: tuple[EventoExterno, ...]
     padrao: bool = False
     herda: str | None = None
+    # Limite de segmentação só deste caso, quando ele precisa de um diferente
+    # do global (seção 8.1: a convenção C2 pede 40 em E7 e os valores de
+    # E1–E6 exigem 46 ou mais). `None` = usa `parametros.limite_segmento`.
+    limite_segmento: int | None = None
 
 
 @dataclass(frozen=True)
@@ -1157,6 +1161,22 @@ def _v09_gateway_na_rede_local(topologia: Topologia) -> None:
             raise ErroTopologia(f"Gateway de {dispositivo.nome} fora da rede local")
 
 
+def limite_de_segmento(topologia: Topologia, caso: Caso) -> int:
+    """O limite de carga útil da camada 4 que vale **neste** caso.
+
+    O arquivo declara um limite global em `parametros.limite_segmento`, e um
+    caso pode sobrescrevê-lo. A razão está na seção 8.1 da documentação: a
+    convenção C2 do enunciado fixa 40 octetos, mas os valores publicados de
+    E1 a E6 só existem com segmento único, o que exige 46 ou mais. Nenhum
+    valor único atende aos dois lados, e é por isso que C7 — o caso que existe
+    para demonstrar segmentação — declara o seu."""
+    return (
+        caso.limite_segmento
+        if caso.limite_segmento is not None
+        else topologia.parametros.limite_segmento
+    )
+
+
 def _v10_limite_segmento_comporta_os_casos(topologia: Topologia) -> None:
     """V-10. `limite_segmento` é o limite de carga útil da camada 4 (decisão
     D1: 64 octetos, "maior que 46, porque C2 gera segmento único").
@@ -1192,6 +1212,10 @@ def _v10_limite_segmento_comporta_os_casos(topologia: Topologia) -> None:
     # Sem dois tamanhos diferentes não há caso de segmentação a isentar.
     isento = max(mensagens) if len(set(mensagens)) > 1 else None
     for caso in topologia.casos:
+        if caso.limite_segmento is not None:
+            # O caso declarou o seu limite: segmentar (ou não) ali é intenção
+            # escrita no arquivo, não efeito colateral de mexer no global.
+            continue
         for fluxo in caso.fluxos:
             octetos = len(fluxo.mensagem.encode("utf-8"))
             if octetos == isento:
@@ -1582,6 +1606,15 @@ def _caso_bruto(item: Any, onde: str) -> Caso:
         )
     )
 
+    limite_bruto = obj.get("limite_segmento")
+    limite = (
+        None
+        if limite_bruto is None
+        else _inteiro(limite_bruto, f"{onde}.limite_segmento")
+    )
+    if limite is not None and limite <= 0:
+        raise ErroTopologia(f"{onde}.limite_segmento: deve ser positivo")
+
     return Caso(
         id=ident,
         titulo=_texto(_campo(obj, "titulo", onde), f"{onde}.titulo"),
@@ -1590,6 +1623,7 @@ def _caso_bruto(item: Any, onde: str) -> Caso:
         eventos_externos=eventos,
         padrao=_booleano(obj.get("padrao", False), f"{onde}.padrao"),
         herda=herda,
+        limite_segmento=limite,
     )
 
 

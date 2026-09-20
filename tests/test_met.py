@@ -14,7 +14,7 @@ repetida no teste erraria junto.
     | C4   |  42 B |       4 |       368 B | 11,4% |      88,6% |
     | C5   |  42 B |       1 |        92 B |    0% |          — |
     | C6   |  42 B |       3 |       276 B |    0% |          — |
-    | C7   | 180 B |   4 × 3 |      1288 B | 14,0% |      86,0% |
+    | C7   | 100 B |   4 × 3 |       968 B | 10,3% |      89,7% |
 
 O que cada linha demonstra, e por isso a tabela inteira importa: C1 e C2 são a
 mesma mensagem em um enlace e em quatro — a eficiência cai de 45,7% para 11,4%
@@ -57,7 +57,7 @@ TABELA_11_3 = {
     "C4": {"dados": 42, "enlaces": 4, "transmitido": 368, "eta": 0.114, "sobrecarga": 0.886},
     "C5": {"dados": 42, "enlaces": 1, "transmitido": 92, "eta": 0.0, "sobrecarga": 1.0},
     "C6": {"dados": 42, "enlaces": 3, "transmitido": 276, "eta": 0.0, "sobrecarga": 1.0},
-    "C7": {"dados": 180, "enlaces": 12, "transmitido": 1288, "eta": 0.140, "sobrecarga": 0.860},
+    "C7": {"dados": 100, "enlaces": 12, "transmitido": 968, "eta": 0.103, "sobrecarga": 0.897},
 }
 
 # Quantos quadros cada caso constrói. Não está na tabela 11.3, mas é o par do
@@ -81,9 +81,9 @@ class ValoresDaTabela(unittest.TestCase):
                 self.assertIsNotNone(self.metricas[caso])
 
     def test_dados_uteis(self):
-        """Contados uma vez, não por segmento nem por travessia: C7 tem 180 B
+        """Contados uma vez, não por segmento nem por travessia: C7 tem 100 B
         repartidos em três segmentos que cruzam quatro enlaces cada, e continua
-        sendo 180."""
+        sendo 100."""
         for caso, esperado in TABELA_11_3.items():
             with self.subTest(caso=caso):
                 self.assertEqual(self.metricas[caso].dados_uteis, esperado["dados"])

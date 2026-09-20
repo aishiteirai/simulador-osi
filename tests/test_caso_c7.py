@@ -1,15 +1,16 @@
 """Caso C7 — mensagem longa: segmentação e remontagem (issue #42).
 
-180 octetos não cabem num segmento de 64 (decisão D1), então a camada 4 da
-origem parte a mensagem em três e a do destino a remonta. É o caso que separa
-duas coisas que os outros confundem, porque neles coincidem: **a mensagem** e
-**a unidade que trafega**. Aqui uma mensagem vira três pacotes, doze quadros e
-uma única entrega.
+A mensagem tem 100 octetos e chega à camada 4 com 104, já com o H5; o caso
+declara `limite_segmento` 40 (convenção C2 do enunciado, seção 8.1 da
+documentação), então a camada 4 da origem parte a mensagem em três e a do
+destino a remonta. É o caso que separa duas coisas que os outros confundem,
+porque neles coincidem: **a mensagem** e **a unidade que trafega**. Aqui uma
+mensagem vira três pacotes, doze quadros e uma única entrega.
 
 O que a seção 10/C7 cobra, e este arquivo prende:
 
-- três `SEGMENTA` numerados `1 de 3`, `2 de 3`, `3 de 3`, com o corte 64+64+56
-  visível nos tamanhos (72, 72 e 64 octetos, já com o H4 de 8);
+- três `SEGMENTA` numerados `1 de 3`, `2 de 3`, `3 de 3`, com o corte 40+40+24
+  visível nos tamanhos (48, 48 e 32 octetos, já com o H4 de 8);
 - `Q1` a `Q12` em sequência contínua — o contador de quadros não reinicia a
   cada segmento (R2);
 - **uma única** linha `REMONTA` em H4, e a entrega à camada 5 depois dela: a
@@ -18,9 +19,9 @@ O que a seção 10/C7 cobra, e este arquivo prende:
 - a travessia é sequencial (decisão D5): o segmento 2 só começa quando o 1
   chegou — não há entrelaçamento, que é o que distingue C7 de C3.
 
-A contabilidade de referência (seção 11.3): cada segmento carrega 8 (L4) + 20
-(L3) + 18 (L2) = 46 octetos de controle, dando quadros de 110, 110 e 102 —
-322 por travessia, 1288 nos quatro enlaces.
+A contabilidade de referência (seção 4.7 do enunciado): cada segmento carrega
+8 (L4) + 20 (L3) + 18 (L2) = 46 octetos de controle, dando quadros de 86, 86
+e 70 — 242 por travessia, 968 nos quatro enlaces, η = 100/968 = 10,3%.
 
 Executar:  python -m unittest tests.test_caso_c7
 """
@@ -55,19 +56,19 @@ class CasoC7(unittest.TestCase):
 
     # -- as três linhas escritas por extenso na seção 10/C7 ----------------
 
-    def test_a_mensagem_do_caso_tem_180_octetos(self):
+    def test_a_mensagem_do_caso_tem_100_octetos(self):
         mensagem = self.topo.caso("C7").fluxos[0].mensagem
-        self.assertEqual(len(mensagem.encode("utf-8")), 180)
+        self.assertEqual(len(mensagem.encode("utf-8")), 100)
 
     def test_tres_segmenta_numerados_de_1_a_3(self):
-        """O corte 64+64+56 aparece nos tamanhos: 72, 72 e 64 octetos, cada um
+        """O corte 40+40+24 aparece nos tamanhos: 48, 48 e 32 octetos, cada um
         já com os 8 do cabeçalho H4."""
         segmenta = self.acoes("SEGMENTA", "H1")
         self.assertEqual(
             [(e.segmento.n, e.segmento.total) for e in segmenta],
             [(1, 3), (2, 3), (3, 3)],
         )
-        self.assertEqual([e.tamanho for e in segmenta], [72, 72, 64])
+        self.assertEqual([e.tamanho for e in segmenta], [48, 48, 32])
         self.assertEqual(
             segmenta[0].descricao, "porta 5210 → 443, segmento 1 de 3"
         )
@@ -76,7 +77,7 @@ class CasoC7(unittest.TestCase):
         remonta = self.acoes("REMONTA", "H4")
         self.assertEqual(len(remonta), 1)
         self.assertEqual(remonta[0].descricao, "3 segmentos remontados em ordem")
-        self.assertEqual(remonta[0].tamanho, 184)
+        self.assertEqual(remonta[0].tamanho, 104)
 
     def test_a_entrega_a_camada_5_vem_depois_da_remontagem(self):
         """Ordem exigida pelo critério: enquanto faltar segmento, a subida para
@@ -84,7 +85,7 @@ class CasoC7(unittest.TestCase):
         remonta = self.acoes("REMONTA", "H4")[0]
         encerra = self.acoes("ENCERRA", "H4")[0]
         self.assertEqual(encerra.passo, remonta.passo + 1)
-        self.assertEqual(encerra.tamanho, 180)
+        self.assertEqual(encerra.tamanho, 100)
 
     # -- a camada 4 do destino só age quando a mensagem fecha --------------
 
@@ -119,15 +120,15 @@ class CasoC7(unittest.TestCase):
         )
 
     def test_tamanho_dos_quadros_por_segmento(self):
-        """110, 110 e 102: os dois primeiros segmentos levam 64 octetos de
-        dados, o último 56 (seção 11.3)."""
+        """86, 86 e 70: os dois primeiros segmentos levam 40 octetos de
+        dados, o último 24 (seção 4.7 do enunciado)."""
         tamanhos = [e.tamanho for e in self.acoes("ENQUADRA")]
-        self.assertEqual(tamanhos, [110] * 8 + [102] * 4)
+        self.assertEqual(tamanhos, [86] * 8 + [70] * 4)
 
-    def test_total_transmitido_de_1288_octetos(self):
+    def test_total_transmitido_de_968_octetos(self):
         transmitidos = [e.tamanho for e in self.eventos if e.acao == "TRANSMITE"]
         self.assertEqual(len(transmitidos), 12)
-        self.assertEqual(sum(transmitidos), 1288)
+        self.assertEqual(sum(transmitidos), 968)
 
     def test_um_unico_par_logico_e_uma_unica_sessao(self):
         """Três pacotes, mas uma conversa só: o par lógico é gravado uma vez na

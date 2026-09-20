@@ -743,9 +743,21 @@ class Computador(No):
 
     __slots__ = ("l4", "l5", "l6", "l7")
 
-    def __init__(self, dispositivo: DispositivoTopologia, topologia: Topologia) -> None:
+    def __init__(
+        self,
+        dispositivo: DispositivoTopologia,
+        topologia: Topologia,
+        limite_segmento: int | None = None,
+    ) -> None:
         super().__init__(dispositivo, topologia)
-        self.l4 = CamadaTransporte(topologia.parametros.limite_segmento)
+        # `limite_segmento` é o limite do caso em execução (`rede.limite_de
+        # _segmento`). Sem ele, vale o global do arquivo — é o que mantém
+        # `montar_dispositivos(topologia)` utilizável fora de uma execução.
+        self.l4 = CamadaTransporte(
+            limite_segmento
+            if limite_segmento is not None
+            else topologia.parametros.limite_segmento
+        )
         self.l5 = CamadaSessao()
         self.l6 = CamadaApresentacao()
         self.l7 = CamadaAplicacao()
@@ -1014,15 +1026,25 @@ def logico_do_extremo(topologia: Topologia, extremo: Extremo) -> str:
     return interfaces[0].logico
 
 
-def montar_dispositivos(topologia: Topologia) -> dict[str, No]:
+def montar_dispositivos(
+    topologia: Topologia, limite_segmento: int | None = None
+) -> dict[str, No]:
     """Um objeto de pilha por dispositivo da topologia, indexado pelo nome:
     `Computador` para os computadores, `Roteador` para os roteadores.
 
     Montar tudo de uma vez, na carga, é o que permite `atualizar_topologia`
     depois — a queda de um enlace em C4 recalcula as tabelas sem reconstruir
-    as pilhas, preservando o estado de remontagem da camada 4."""
+    as pilhas, preservando o estado de remontagem da camada 4.
+
+    `limite_segmento` é o limite de segmentação do caso que vai rodar; só os
+    computadores o usam, porque só eles têm camada 4. Omitido, vale o global
+    do arquivo."""
     return {
-        d.nome: (Computador(d, topologia) if d.tipo == "computador" else Roteador(d, topologia))
+        d.nome: (
+            Computador(d, topologia, limite_segmento)
+            if d.tipo == "computador"
+            else Roteador(d, topologia)
+        )
         for d in topologia.dispositivos
     }
 
